@@ -1,93 +1,139 @@
-# if-plugin-template
+# Prometheus Importer Plugin
 
-`if-plugin-template` is an environmental impact calculator template which exposes an API for [IF](https://github.com/Green-Software-Foundation/if) to retrieve energy and embodied carbon estimates.
+`prometheus-importer` is an IF plugin to import prometheus metrics like CPU or memory utilization into IF pipeline. This serves as an input for other calculation plugins for eg an energy calculation plugin.
 
 ## Implementation
 
-Here can be implementation details of the plugin. For example which API is used, transformations and etc.
+This plugin calls [prometheus's range query api](https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries) under the hood. 
+Api Signature:
+Request:
+POST /api/v1/query_range?query=&start=&end=&step=
+Response:
+```json
+{
+  "status": "success",
+  "data": {
+    "resultType": "matrix",
+    "result": [
+      {
+        "metric": { "<label_name>": "<label_value>", ... },
+        "values": [ [ <unix_time>, "<sample_value>" ], ... ]
+      },
+      ...
+    ]
+  }
+}
+```
+
+The following parameters of this api are configurable via the global-config property in the manifest file: query, start, end, step. In addition to these, you need to specify
+1. metric labels which need to be included in the output through metric-labels,
+2. name of ouptut property to which you need the metric value mapped through metric-name and
+3. key- value pairs which can be optionally added as default labels through default-labels
+
+The plugin queries the prometheus server using the creds provided in __ and values provided in global-config properties. It then parses the output and transforms it into a list of output params defined by properties provided in global-config
 
 ## Usage
 
-To run the `<YOUR-CUSTOM-PLUGIN>`, an instance of `PluginInterface` must be created. Then, the plugin's `execute()` method can be called, passing required arguments to it.
+### Prerequisites
 
-This is how you could run the model in Typescript:
+1. [Setup a local prometheus server](link)
+2. [Setup a local k8s cluster][link]
+3. [Setup cadvisor](link) to generate k8s metrics
+4. Additionally, [setup kube-state-metrics](link) to get k8s objects state metrics
 
-```typescript
-async function runPlugin() {
-  const newPlugin = await new MyCustomPlugin().configure(params);
-  const usage = await newPlugin.calculate([
-    {
-      timestamp: '2021-01-01T00:00:00Z',
-      duration: '15s',
-      'cpu-util': 34,
-    },
-    {
-      timestamp: '2021-01-01T00:00:15Z',
-      duration: '15s',
-      'cpu-util': 12,
-    },
-  ]);
+### Example prometheus server credentials setup
 
-  console.log(usage);
-}
-
-runPlugin();
-```
-
-## Testing model integration
-
->Note: [If Core](https://github.com/Green-Software-Foundation/if-core) plugin has a set of error classes which should be used for having necessary integration with the IF framework. More information on error classes can be found at [Errors Reference](https://if.greensoftware.foundation/reference/errors/).
-
-### Using local links
-
-For using locally developed model in `IF Framework` please follow these steps: 
-
-1. On the root level of a locally developed model run `npm link`, which will create global package. It uses `package.json` file's `name` field as a package name. Additionally name can be checked by running `npm ls -g --depth=0 --link=true`.
-2. Use the linked model in impl by specifying `name`, `method`, `path` in initialize models section. 
+### Example Manifest
 
 ```yaml
-name: plugin-demo-link
-description: loads plugin
-tags: null
+name: prometheus importer demo
+description: simple demo invoking prometheus-importer plugin
+tags:
 initialize:
   plugins:
-    my-custom-plugin:
-      method: MyCustomPlugin
-      path: "<name-field-from-package.json>"
+    prometheus-importer:
+      method: PrometheusImporter
+      path: 'https://github.com/Shivani-G/prometheus-importer'
       global-config:
-        ...
-...
+        query: 
+        start: '-2d'
+        end: '-1d'
+        step: '1h'
+        metric-labels:
+          - cluster
+        metric-name: cpu/utilization
+        default-labels:
+          - cloud/vendor: aws
+          - cloud/instance-type: t3.medium
+  outputs: 
+    - yaml
+tree:
+  children:
+    child:
+      pipeline:
+        - prometheus-importer
+      inputs:
 ```
 
-### Using directly from Github
-
-You can simply push your model to the public Github repository and pass the path to it in your impl.
-For example, for a model saved in `github.com/my-repo/my-model` you can do the following:
-
-npm install your model: 
-
-```
-npm install -g https://github.com/my-repo/my-model
-```
-
-Then, in your `impl`, provide the path in the model instantiation. You also need to specify which class the model instantiates. In this case you are using the `PluginInterface`, so you can specify `OutputModel`. 
-
-```yaml
-name: plugin-demo-git
-description: loads plugin
-tags: null
-initialize:
-  plugins:
-    my-custom-plugin:
-      method: MyCustomPlugin
-      path: https://github.com/my-repo/my-model
-      global-config:
-        ...
-...
-```
-
-Now, when you run the `manifest` using the IF CLI, it will load the model automatically. Run using:
+You can run this by passing it to `ie`. Run impact using the following command run from the project root:
 
 ```sh
-ie --manifest <path-to-your-impl> --output <path-to-save-output>
+npm i -g @grnsft/if
+npm i -g https://github.com/Shivani-G/prometheus-importer
+ie --manifest <path-to-your-manifest-file> --output <path-to-your-output-file>
+
+```
+
+
+This yields a result that looks like the following (saved to `<path-to-your-output-file>`):
+
+```yaml
+name: ccf-demo
+description: example manifest invoking CCF plugin
+initialize:
+  plugins:
+    ccf:
+name: prometheus importer demo
+description: simple demo invoking prometheus-importer plugin
+tags:
+initialize:
+  plugins:
+    prometheus-importer:
+      method: PrometheusImporter
+      path: 'https://github.com/Shivani-G/prometheus-importer'
+      global-config:
+        query: 
+        start: '-2d'
+        end: '-1d'
+        step: '1h'
+        metric-labels:
+          - cluster
+        metric-name: cpu/utilization
+        default-labels:
+          - cloud/vendor: aws
+          - cloud/instance-type: t3.medium
+  outputs: 
+    - yaml
+tree:
+  children:
+    child:
+      pipeline:
+        - prometheus-importer
+      inputs: null
+      outputs:
+        - cluster: some-cluster
+          timestamp: 1717848264.366
+          cpu/utilization: 0
+          cloud/vendor: aws
+          cloud/instance-type: t3.medium
+        - cluster: some-cluster
+          timestamp: 1717851864.366
+          cpu/utilization: 0
+          cloud/vendor: aws
+          cloud/instance-type: t3.medium
+        - cluster: some-cluster
+          timestamp: 1717855464.366
+          cpu/utilization: 0
+          cloud/vendor: aws
+          cloud/instance-type: t3.medium
 ```
