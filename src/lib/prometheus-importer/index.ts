@@ -5,7 +5,7 @@ import {YourGlobalConfig} from './types';
 
 const {GlobalConfigError} = ERRORS;
 
-export const MyCustomPlugin = (
+export const PrometheusImporter = (
   globalConfig: YourGlobalConfig
 ): ExecutePlugin => {
   const metadata = {
