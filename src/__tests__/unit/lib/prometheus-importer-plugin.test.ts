@@ -129,6 +129,7 @@ describe('lib/prometheus-importer: ', () => {
 
     describe('execute(): ', () => {
       it('applies logic when no inputs array provided.', async () => {
+        process.env.HOST = 'https://mocked_url';
         const pluginInstance = PrometheusImporter({
           step: '1h',
           start: '-2d',
