@@ -2,6 +2,110 @@ import {PrometheusImporter} from '../../../lib/prometheus-importer';
 import {AuthenticationProvider} from '../../../lib/prometheus-importer/helpers/auth-provider';
 import {ParseAndEnrichDataTransformer} from '../../../lib/prometheus-importer/helpers/data-transformer';
 
+const defaultRangeQueryRawResponse: Record<string, any> = {
+  status: 'success',
+  isPartial: false,
+  data: {
+    resultType: 'matrix',
+    result: [
+      {
+        metric: {
+          cluster: 'cluster1',
+          container: 'container1',
+        },
+        values: [
+          [1715933559.727, '0'],
+          [1715937159.727, '0'],
+        ],
+      },
+      {
+        metric: {
+          cluster: 'cluster2',
+          container: 'container2',
+        },
+        values: [
+          [1715933559.727, '0'],
+          [1715937159.727, '0'],
+        ],
+      },
+      {
+        metric: {
+          cluster: 'cluster3',
+          container: 'container1',
+        },
+        values: [
+          [1715933559.727, '9'],
+          [1715937159.727, '10'],
+        ],
+      },
+    ],
+  },
+  stats: {
+    seriesFetched: '1',
+    executionTimeMsec: 10,
+  },
+};
+const expectedOutput = [
+  {
+    'cloud/instance-type': 'default_instance_type',
+    'cloud/vendor': 'aws',
+    container: 'container1',
+    'cpu/utilization': 0,
+    duration: 3600,
+    timestamp: 1715933559.727,
+  },
+  {
+    'cloud/instance-type': 'default_instance_type',
+    'cloud/vendor': 'aws',
+    container: 'container1',
+    'cpu/utilization': 0,
+    duration: 3600,
+    timestamp: 1715937159.727,
+  },
+  {
+    'cloud/instance-type': 'default_instance_type',
+    'cloud/vendor': 'aws',
+    container: 'container2',
+    'cpu/utilization': 0,
+    duration: 3600,
+    timestamp: 1715933559.727,
+  },
+  {
+    'cloud/instance-type': 'default_instance_type',
+    'cloud/vendor': 'aws',
+    container: 'container2',
+    'cpu/utilization': 0,
+    duration: 3600,
+    timestamp: 1715937159.727,
+  },
+  {
+    'cloud/instance-type': 'default_instance_type',
+    'cloud/vendor': 'aws',
+    container: 'container1',
+    'cpu/utilization': 9,
+    duration: 3600,
+    timestamp: 1715933559.727,
+  },
+  {
+    'cloud/instance-type': 'default_instance_type',
+    'cloud/vendor': 'aws',
+    container: 'container1',
+    'cpu/utilization': 10,
+    duration: 3600,
+    timestamp: 1715937159.727,
+  },
+];
+
+jest.mock('node-fetch-commonjs', () => ({
+  __esModule: true, // this property tells Jest it's an ES module
+  default: jest.fn(() =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(defaultRangeQueryRawResponse),
+    })
+  ),
+}));
+
 describe('lib/prometheus-importer: ', () => {
   describe('PrometheusImporter(): ', () => {
     it('has metadata field.', () => {
@@ -14,12 +118,33 @@ describe('lib/prometheus-importer: ', () => {
     });
 
     describe('execute(): ', () => {
-      it('applies logic on provided inputs array.', async () => {
+      it('applies no logic when inputs array provided.', async () => {
         const pluginInstance = PrometheusImporter({});
         const inputs = [{}];
 
         const response = await pluginInstance.execute(inputs, {});
         expect(response).toEqual(inputs);
+      });
+    });
+
+    describe('execute(): ', () => {
+      it('applies logic when no inputs array provided.', async () => {
+        const pluginInstance = PrometheusImporter({
+          step: '1h',
+          start: '-2d',
+          end: '-1d',
+          query: 'cluster1|cluster2|cluster3',
+          metricLabels: ['container'],
+          metricName: 'cpu/utilization',
+          defaultLabels: {
+            'cloud/instance-type': 'default_instance_type',
+            duration: 3600,
+            'cloud/vendor': 'aws',
+          },
+        });
+
+        const response = await pluginInstance.execute([]);
+        expect(response).toEqual(expectedOutput);
       });
     });
   });
@@ -75,100 +200,6 @@ describe('helpers/auth-provider: ', () => {
 describe('helpers/data-transformer: ', () => {
   describe('ParseAndEnrichDataTransformer(): ', () => {
     it('parses raw api response and transforms to user defined format', async () => {
-      const defaultRangeQueryRawResponse: Record<string, any> = {
-        status: 'success',
-        isPartial: false,
-        data: {
-          resultType: 'matrix',
-          result: [
-            {
-              metric: {
-                cluster: 'cluster1',
-                container: 'container1',
-              },
-              values: [
-                [1715933559.727, '0'],
-                [1715937159.727, '0'],
-              ],
-            },
-            {
-              metric: {
-                cluster: 'cluster2',
-                container: 'container2',
-              },
-              values: [
-                [1715933559.727, '0'],
-                [1715937159.727, '0'],
-              ],
-            },
-            {
-              metric: {
-                cluster: 'cluster3',
-                container: 'container1',
-              },
-              values: [
-                [1715933559.727, '9'],
-                [1715937159.727, '10'],
-              ],
-            },
-          ],
-        },
-        stats: {
-          seriesFetched: '1',
-          executionTimeMsec: 10,
-        },
-      };
-      const expectedOutput = [
-        {
-          'cloud/instance-type': 'default_instance_type',
-          'cloud/vendor': 'aws',
-          container: 'container1',
-          'cpu/utilization': 0,
-          duration: 3600,
-          timestamp: 1715933559.727,
-        },
-        {
-          'cloud/instance-type': 'default_instance_type',
-          'cloud/vendor': 'aws',
-          container: 'container1',
-          'cpu/utilization': 0,
-          duration: 3600,
-          timestamp: 1715937159.727,
-        },
-        {
-          'cloud/instance-type': 'default_instance_type',
-          'cloud/vendor': 'aws',
-          container: 'container2',
-          'cpu/utilization': 0,
-          duration: 3600,
-          timestamp: 1715933559.727,
-        },
-        {
-          'cloud/instance-type': 'default_instance_type',
-          'cloud/vendor': 'aws',
-          container: 'container2',
-          'cpu/utilization': 0,
-          duration: 3600,
-          timestamp: 1715937159.727,
-        },
-        {
-          'cloud/instance-type': 'default_instance_type',
-          'cloud/vendor': 'aws',
-          container: 'container1',
-          'cpu/utilization': 9,
-          duration: 3600,
-          timestamp: 1715933559.727,
-        },
-        {
-          'cloud/instance-type': 'default_instance_type',
-          'cloud/vendor': 'aws',
-          container: 'container1',
-          'cpu/utilization': 10,
-          duration: 3600,
-          timestamp: 1715937159.727,
-        },
-      ];
-
       const dataTransformer = ParseAndEnrichDataTransformer();
       const metricLabels = ['container'];
       const defaultLabels = {

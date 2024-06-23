@@ -1,5 +1,5 @@
 import {PluginParams, ExecutePlugin} from '@grnsft/if-core/types';
-import {z} from 'zod';
+import {z, ZodSchema} from 'zod';
 import * as dotenv from 'dotenv';
 
 import {ConfigParams, Env} from './types';
@@ -17,10 +17,6 @@ export const PrometheusImporter = (
    * Validates global config.
    */
   const validateGlobalConfig = () => {
-    const keyValuePairSchema = z.object({
-      key: z.string(),
-      value: z.string(),
-    });
     const schema = z.object({
       query: z.string(),
       start: z.string(),
@@ -28,13 +24,19 @@ export const PrometheusImporter = (
       step: z.string(),
       metricLabels: z.array(z.string()),
       metricName: z.string(),
-      defaultLabels: z.array(keyValuePairSchema),
+      defaultLabels: z.record(z.any()),
     });
 
-    const validationResult = schema.safeParse(schema);
+    return validate<z.infer<typeof schema>>(schema, globalConfig);
+  };
+
+  const validate = <T>(schema: ZodSchema<T>, object: any) => {
+    const validationResult = schema.safeParse(object);
+
     if (!validationResult.success) {
       throw new Error(validationResult.error.message);
     }
+
     return validationResult.data;
   };
 
