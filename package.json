@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@grnsft/if-core": "^0.0.7",
-    "typescript": "^5.5.2"
+    "dotenv": "16.3.1",
+    "typescript": "^5.5.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@babel/core": "7.22.10",
