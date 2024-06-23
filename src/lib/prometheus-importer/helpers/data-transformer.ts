@@ -1,6 +1,6 @@
 import {DataTransformer} from '../interfaces';
 
-export const parseAndEnrichDataTransformer = (): DataTransformer => {
+export const ParseAndEnrichDataTransformer = (): DataTransformer => {
   const parseMetrics = async (
     rawResponse: Record<string, any>,
     metricLabels: Array<string>,
@@ -10,7 +10,7 @@ export const parseAndEnrichDataTransformer = (): DataTransformer => {
     const x = await rawResponse;
     const output: Array<Record<string, any>> = [];
     for (const elm of x.data.result) {
-      const metricLabelKeyValuePairs = getMetricLabels(
+      const metricLabelKeyValuePairs = await getMetricLabels(
         metricLabels,
         elm.metric
       );
@@ -19,7 +19,7 @@ export const parseAndEnrichDataTransformer = (): DataTransformer => {
           timestamp: timestamp,
           ...metricLabelKeyValuePairs,
           ...defaultLabels,
-          [metricName]: value,
+          [metricName]: parseInt(value, 10),
         });
       }
     }
