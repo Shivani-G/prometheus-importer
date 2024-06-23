@@ -1,26 +1,12 @@
-import {ApiHeader} from '../types';
+import {AuthCredentials} from '../types';
 
 export type AuthProvider = {
   /**
    *
-   * @returns auth type: None, BasicAuth, BearerTokenAuth
-   */
-  getAuthType: () => string;
-
-  /**
-   *
-   * @param username
-   * @param password
+   * @param authCredentials
    * @returns header as key value pairs
    */
-  getBasicAuthHeaders: (username: string, password: string) => ApiHeader;
-
-  /**
-   *
-   * @param bearerToken
-   * @returns header as key value pairs
-   */
-  getBearerTokenHeaders: (bearerToken: string) => ApiHeader;
+  getAuthHeaders: (authCredentials: AuthCredentials) => Record<string, any>;
   [key: string]: any;
 };
 
@@ -30,13 +16,17 @@ export type QueryExecutor = {
    * @param step
    * @param start
    * @param end
+   * @param host
+   * @param authCredentials
    * @returns json api response
    */
   getMetricsFor: (
     query: string,
     step: string,
     start: string,
-    end: string
+    end: string,
+    host: string,
+    authCredentials: AuthCredentials
   ) => Object;
   [key: string]: any;
 };
