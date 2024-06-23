@@ -3,6 +3,8 @@ import {z} from 'zod';
 import * as dotenv from 'dotenv';
 
 import {ConfigParams, Env} from './types';
+import {RangeQueryExecutor} from './helpers/range-query-executor';
+import {ParseAndEnrichDataTransformer} from './helpers/data-transformer';
 
 export const PrometheusImporter = (
   globalConfig: ConfigParams
@@ -40,7 +42,6 @@ export const PrometheusImporter = (
    * Validates required env properties.
    */
   const validateEnvProperties = () => {
-    dotenv.config();
     if (getEnvVariable('HOST') === '') {
       throw new Error('Environment variable HOST is not defined');
     }
@@ -62,14 +63,24 @@ export const PrometheusImporter = (
       return inputs;
     }
     validateGlobalConfig();
+    dotenv.config();
     validateEnvProperties();
-
-    return inputs.map(input => {
-      // your logic here
-      globalConfig;
-
-      return input;
-    });
+    const queryExecutor = RangeQueryExecutor();
+    const dataTransformer = ParseAndEnrichDataTransformer();
+    const rawResponse = queryExecutor.getMetricsFor(
+      globalConfig.query,
+      globalConfig.step,
+      globalConfig.start,
+      globalConfig.end,
+      getEnvVariable('HOST'),
+      process.env
+    );
+    return dataTransformer.parseMetrics(
+      rawResponse,
+      globalConfig.metricLabels,
+      globalConfig.metricName,
+      globalConfig.defaultLabels
+    );
   };
 
   return {
