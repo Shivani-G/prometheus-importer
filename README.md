@@ -5,10 +5,10 @@
 ## Implementation
 
 This plugin calls [prometheus's range query api](https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries) under the hood. 
-Api Signature:
-Request:
-POST /api/v1/query_range?query=&start=&end=&step=
-Response:
+Api Signature:  
+Request:  
+POST /api/v1/query_range?query=&start=&end=&step=  
+Response:  
 ```json
 {
   "status": "success",
@@ -30,7 +30,7 @@ The following parameters of this api are configurable via the global-config prop
 2. name of ouptut property to which you need the metric value mapped through metric-name and
 3. key- value pairs which can be optionally added as default labels through default-labels
 
-The plugin queries the prometheus server using the creds provided in __ and values provided in global-config properties. It then parses the output and transforms it into a list of output params defined by properties provided in global-config
+The plugin queries the prometheus server using the creds provided in .env file and values provided in global-config properties. It then parses the output and transforms it into a list of output params defined by properties provided in global-config
 
 ## Usage
 
@@ -94,11 +94,6 @@ ie --manifest <path-to-your-manifest-file> --output <path-to-your-output-file>
 This yields a result that looks like the following (saved to `<path-to-your-output-file>`):
 
 ```yaml
-name: ccf-demo
-description: example manifest invoking CCF plugin
-initialize:
-  plugins:
-    ccf:
 name: prometheus importer demo
 description: simple demo invoking prometheus-importer plugin
 tags:
