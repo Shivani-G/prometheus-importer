@@ -19,7 +19,7 @@ export const ParseAndEnrichDataTransformer = (): DataTransformer => {
           timestamp: timestamp,
           ...metricLabelKeyValuePairs,
           ...defaultLabels,
-          [metricName]: parseInt(value, 10),
+          [metricName]: parseFloat(value),
         });
       }
     }
