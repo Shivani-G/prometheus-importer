@@ -4,7 +4,7 @@
 
 ## Implementation
 
-This plugin calls [prometheus's range query api](https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries) under the hood. 
+This plugin calls [prometheus's range query api](https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries) under the hood.  
 Api Signature:  
 Request:  
 POST /api/v1/query_range?query=&start=&end=&step=  
